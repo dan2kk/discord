@@ -3,19 +3,26 @@ import express, {Express, Request, Response, NextFunction} from "express";
 import {run} from './database/db';
 import {router as test} from './router/test'
 import {router as login} from './router/login'
-import {createServer} from "http"
+import {createServer}  from 'https'
 import {Server} from "socket.io"
-import cors from 'cors';
-import * as http from "http";
+import cors from 'cors'
+import fs from 'fs'
 
 
 //express, socket.io 정의
 const app : Express = express();
-const port : number = 9876;
-const httpServer = createServer(app)
-const io = new Server(httpServer, {
+//HTTPS PORT USE
+const port : number = 9091;
+const serverConfig = {
+    key: fs.readFileSync('./src/database/private.key'),
+    cert: fs.readFileSync('./src/database/cccc.crt')
+}
+var users: {} = {};
+var allUsers: {} = {};
+const httpsServer = createServer(serverConfig, app)
+const io = new Server(httpsServer, {
     cors:{
-        origin: "http://localhost:8083"
+        origin: "http://localhost:9092"
     }
 })
 
@@ -34,16 +41,15 @@ io.on("connection", (socket)=>{
 })
 //라우터 연결
 app.use('/login', login);
-
+app.use('/', express.static("./public"))
 //test 라우터
 app.use('/test', test);
-
 //예외처리
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err);
     res.status(500).send(err.message);
 });
 //포트 시작
-httpServer.listen(port, () => {
+httpsServer.listen(port, () => {
     console.log("Server is running on port " + port);    
 })
