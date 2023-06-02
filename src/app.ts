@@ -1,10 +1,10 @@
 // @ts-ignore
 import express, {Express, Request, Response, NextFunction} from "express";
-import {run} from './database/db';
+import {run as rundb} from './database/db';
+import {run as runsocket} from './router/socket';
 import {router as test} from './router/test'
 import {router as login} from './router/login'
 import {createServer}  from 'https'
-import {Server} from "socket.io"
 import cors from 'cors'
 import fs from 'fs'
 
@@ -15,19 +15,13 @@ const app : Express = express();
 const port : number = 9091;
 const serverConfig = {
     key: fs.readFileSync('./src/database/private.key'),
-    cert: fs.readFileSync('./src/database/cccc.crt')
+    cert: fs.readFileSync('./src/database/mynetworkproject.crt')
 }
-var users: {} = {};
-var allUsers: {} = {};
+
 const httpsServer = createServer(serverConfig, app)
-const io = new Server(httpsServer, {
-    cors:{
-        origin: "http://localhost:9092"
-    }
-})
 
 //db 실행
-run().catch(console.dir);
+rundb().catch(console.dir);
 
 //CORS 설정
 app.use(cors<Request>());
@@ -36,9 +30,7 @@ app.use(cors<Request>());
 app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 //socket event listener 정의
-io.on("connection", (socket)=>{
-    console.log(socket.id)
-})
+
 //라우터 연결
 app.use('/login', login);
 app.use('/', express.static("./public"))
@@ -49,7 +41,9 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err);
     res.status(500).send(err.message);
 });
+runsocket()
 //포트 시작
 httpsServer.listen(port, () => {
     console.log("Server is running on port " + port);    
 })
+export {httpsServer}

@@ -15,7 +15,7 @@ async function run(){
     try{
         await client.connect();
         await client.db('test').command({ping: 1});
-        console.log("Connected successfully to server");
+        console.log("Connected successfully to DB server");
     }
     catch(e){
         console.error(e);

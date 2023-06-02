@@ -14,7 +14,7 @@ router.get('/', async(req : Request, res : Response) => {
             if(result == null)
                 res.send({"state": false})
             else
-                res.send({"state": true})
+                res.send({"state": true, "userName": result.nickname})
         },
         (result : any)=>{
             console.error(result)
