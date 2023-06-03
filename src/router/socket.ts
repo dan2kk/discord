@@ -1,4 +1,6 @@
 import {Server, Socket} from "socket.io"
+// @ts-ignore
+import {Server as p2pServer} from "socket.io-p2p-server"
 import {httpsServer} from "../app";
 let channelNumber = 1;
 class User{
@@ -26,15 +28,15 @@ class Channel{
         this.channelNumber = channelNumber++;
     }
 }
+let users: User[] = [];
+let allUsers: string[] = [];
+let channels: {[channelName:string] :Channel }= {};
+let nowUser: User;
 function run(){
     const io = new Server(httpsServer, {
         cors: {origin:"http://localhost:8080"}
     })
-
-    let users: User[] = [];
-    let allUsers: string[] = [];
-    let channels: {[channelName:string] :Channel }= {};
-    let nowUser: User;
+    io.use(p2pServer)
     io.on("connect", (socket: Socket)=>{
         socket.on("login", function(msg){
             let data = null;
@@ -61,7 +63,13 @@ function run(){
             sendTo(socket, {
                 type: "login",
                 success: true,
-                channels: Object.keys(channels)
+                channels: Object.values(channels).map(channel => ({
+                    name: channel.name,
+                    locked: channel.locked,
+                    users: channel.users.length,
+                    number: channel.channelNumber
+                    // 필요한 다른 속성들
+                }))
             })
         })
         socket.on("channelCreate", function(msg){
@@ -148,6 +156,36 @@ function run(){
                 })
             }
         })
+        socket.on("channelList", ()=>{
+            sendTo(socket, {
+                type: "channelList",
+                channels: Object.values(channels).map(channel => ({
+                    name: channel.name,
+                    locked: channel.locked,
+                    users: channel.users.length,
+                    number: channel.channelNumber
+                    // 필요한 다른 속성들
+                }))
+            })
+        })
+        socket.on("chatMessage", (msg) =>{
+
+            let data = null;
+            try{
+                data = JSON.parse(msg)
+                nowUser = new User(data.name, socket)
+            }
+            catch(e){
+                console.error(e)
+            }
+            io.to(data.channel).emit("message", JSON.stringify({
+                type: "chatMessage",
+                user: data.name,
+                msg: data.msg
+            }))
+            console.log(data.name + " send "+ data.msg + " to "+ data.channel)
+        })
+
         socket.on("disconnecting", (reason) => {
             for(let i:number=0; i< users.length; i++){
                 let tempUser:User = users[i]
@@ -162,7 +200,6 @@ function run(){
 
     console.log("Socket server is running on https://localhost:9091")
 }
-
 
 function sendTo(conn: Socket, message: {} ) {
     conn.send(JSON.stringify(message))

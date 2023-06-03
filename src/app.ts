@@ -1,6 +1,6 @@
 // @ts-ignore
 import express, {Express, Request, Response, NextFunction} from "express";
-import {run as rundb} from './database/db';
+import {run as runDb} from './database/db';
 import {run as runsocket} from './router/socket';
 import {router as test} from './router/test'
 import {router as login} from './router/login'
@@ -21,7 +21,7 @@ const serverConfig = {
 const httpsServer = createServer(serverConfig, app)
 
 //db 실행
-rundb().catch(console.dir);
+runDb().catch(console.dir);
 
 //CORS 설정
 app.use(cors<Request>());
@@ -46,4 +46,5 @@ runsocket()
 httpsServer.listen(port, () => {
     console.log("Server is running on port " + port);    
 })
+
 export {httpsServer}
