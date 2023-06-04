@@ -1,6 +1,5 @@
 import {Server, Socket} from "socket.io"
 // @ts-ignore
-import {Server as p2pServer} from "socket.io-p2p-server"
 import {httpsServer} from "../app";
 let channelNumber = 1;
 class User{
@@ -36,7 +35,9 @@ function run(){
     const io = new Server(httpsServer, {
         cors: {origin:"http://localhost:8080"}
     })
+    let p2pServer = require('socket.io-p2p-server').Server
     io.use(p2pServer)
+    require('socket.io-stream')(io)
     io.on("connect", (socket: Socket)=>{
         socket.on("login", function(msg){
             let data = null;
@@ -141,7 +142,6 @@ function run(){
             else{
                 console.log("joining to channel")
                 let candidateList: [] = [];
-
                 channels[data.channelName].users.push(nowUser)
                 let tempList = []
                 for(let i=0; i<channels[data.channelName].users.length; i++){
@@ -185,23 +185,19 @@ function run(){
             }))
             console.log(data.name + " send "+ data.msg + " to "+ data.channel)
         })
-        socket.on('start-stream', function (msg){
-            let data = null;
+        socket.on('start-stream', function (data){
             try{
-                data = JSON.parse(msg)
-                nowUser = new User(data.name, socket)
+                data = JSON.parse(data)
             }
             catch(e){
                 console.error(e)
             }
-            console.log(data)
-            console.log('Stream started at '+data.channel+" from" + data.name)
-            if (data.stream && typeof data.stream.getAudioTracks === 'function' && typeof data.stream.getVideoTracks === 'function') {
-                io.to(data.channel).emit('stream', data.stream)
-            } else {
-                console.error("Invalid stream type");
-                console.log(data.stream)
-            }
+            console.log("start-stream param:", data)
+            console.log('Stream started at '+data["channel"]+" from " + data["name"])
+            socket.to(data.channel).emit('message', JSON.stringify({
+                type: "stream",
+                peerId: data.peerId
+            }))
         })
         socket.on("disconnecting", (reason) => {
             for(let i:number=0; i< users.length; i++){
