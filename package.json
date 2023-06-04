@@ -28,7 +28,8 @@
     "nodemon": "^2.0.4",
     "socket.io": "^4.6.1",
     "socket.io-p2p-server": "^1.2.0",
-    "stompjs": "^2.3.3"
+    "stompjs": "^2.3.3",
+    "webrtc": "^1.14.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.17"

@@ -185,7 +185,24 @@ function run(){
             }))
             console.log(data.name + " send "+ data.msg + " to "+ data.channel)
         })
-
+        socket.on('start-stream', function (msg){
+            let data = null;
+            try{
+                data = JSON.parse(msg)
+                nowUser = new User(data.name, socket)
+            }
+            catch(e){
+                console.error(e)
+            }
+            console.log(data)
+            console.log('Stream started at '+data.channel+" from" + data.name)
+            if (data.stream && typeof data.stream.getAudioTracks === 'function' && typeof data.stream.getVideoTracks === 'function') {
+                io.to(data.channel).emit('stream', data.stream)
+            } else {
+                console.error("Invalid stream type");
+                console.log(data.stream)
+            }
+        })
         socket.on("disconnecting", (reason) => {
             for(let i:number=0; i< users.length; i++){
                 let tempUser:User = users[i]
