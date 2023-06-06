@@ -4,12 +4,10 @@ import {httpsServer} from "../app";
 let channelNumber = 1;
 class User{
     name: string;
-    socket: Socket;
     isLive: boolean;
     peerId: string;
-    constructor(name:string, socket:Socket) {
+    constructor(name:string) {
         this.name =name;
-        this.socket = socket;
         this.isLive = false;
         this.peerId = ""
     }
@@ -47,7 +45,7 @@ function run(){
             let data = null;
             try{
                 data = JSON.parse(msg)
-                nowUser = new User(data.name, socket)
+                nowUser = new User(data.name)
             }
             catch(e){
                 console.error(e)
@@ -62,26 +60,20 @@ function run(){
                 return
             }
             console.log("login success")
-            users.push(new User(data.name, socket))
+            users.push(new User(data.name))
             allUsers.push(data.name)
 
             sendTo(socket, {
                 type: "login",
                 success: true,
-                channels: Object.values(channels).map(channel => ({
-                    name: channel.name,
-                    locked: channel.locked,
-                    users: channel.users.length,
-                    number: channel.channelNumber
-                    // 필요한 다른 속성들
-                }))
+                channels: channels
             })
         })
         socket.on("channelCreate", function(msg){
             let data = null;
             try{
                 data = JSON.parse(msg)
-                nowUser = new User(data.name, socket)
+                nowUser = new User(data.name)
             }
             catch(e){
                 console.error(e)
@@ -112,7 +104,7 @@ function run(){
             let data = null;
             try{
                 data = JSON.parse(msg)
-                nowUser = new User(data.name, socket)
+                nowUser = new User(data.name)
             }
             catch(e){
                 console.error(e)
@@ -144,13 +136,13 @@ function run(){
                 })
             }
             else{
-                console.log(data.name+ " joining to channel "+data.channel)
+                console.log(data.name+ " joining to channel "+data.channelName)
                 let candidateList: [] = [];
-                channels[data.channelName].users.push(nowUser)
                 let tempList: {[username: string]: User} = {}
                 for(let i=0; i<channels[data.channelName].users.length; i++){
                     tempList[channels[data.channelName].users[i].name]= channels[data.channelName].users[i]
                 }
+                channels[data.channelName].users.push(nowUser)
                 socket.join(data.channelName)
                 sendTo(socket, {
                     type: "channelJoin",
@@ -158,9 +150,9 @@ function run(){
                     channelName: data.channelName,
                     candidate: tempList
                 })
-                socket.to(data.channel).emit("message", JSON.stringify({
+                socket.to(data.channelName).emit("message", JSON.stringify({
                     type: "userJoin",
-                    user: {name: data.name, peerId: data.peerId}
+                    user: nowUser
                 }))
 
             }
@@ -168,12 +160,7 @@ function run(){
         socket.on("channelList", ()=>{
             sendTo(socket, {
                 type: "channelList",
-                channels: Object.values(channels).map(channel => ({
-                    name: channel.name,
-                    locked: channel.locked,
-                    users: channel.users.length,
-                    number: channel.channelNumber
-                }))
+                channels: channels
             })
         })
         socket.on("chatMessage", (msg) =>{
@@ -181,7 +168,7 @@ function run(){
             let data = null;
             try{
                 data = JSON.parse(msg)
-                nowUser = new User(data.name, socket)
+                nowUser = new User(data.name)
             }
             catch(e){
                 console.error(e)
@@ -210,19 +197,10 @@ function run(){
             }
             socket.to(data.channel).emit('message', JSON.stringify({
                 type: "stream",
-                name: data.name
+                name: data.name,
+                peerId: data.peerId
             }))
         })
-        socket.on("disconnecting", (reason) => {
-            for(let i:number=0; i< users.length; i++){
-                let tempUser:User = users[i]
-                if (tempUser.socket == socket){
-                    allUsers.splice(allUsers.indexOf(tempUser.name), 0)
-                    break
-                }
-                console.log(tempUser.name + " disconnected from server")
-            }
-        });
     })
 
     console.log("Socket server is running on https://localhost:9091")
