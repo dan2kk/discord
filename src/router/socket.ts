@@ -5,9 +5,13 @@ let channelNumber = 1;
 class User{
     name: string;
     socket: Socket;
+    isLive: boolean;
+    peerId: string;
     constructor(name:string, socket:Socket) {
         this.name =name;
         this.socket = socket;
+        this.isLive = false;
+        this.peerId = ""
     }
 }
 class Channel{
@@ -33,7 +37,7 @@ let channels: {[channelName:string] :Channel }= {};
 let nowUser: User;
 function run(){
     const io = new Server(httpsServer, {
-        cors: {origin:"http://localhost:8080"}
+        cors: {origin:"*"}
     })
     let p2pServer = require('socket.io-p2p-server').Server
     io.use(p2pServer)
@@ -140,12 +144,12 @@ function run(){
                 })
             }
             else{
-                console.log("joining to channel")
+                console.log(data.name+ " joining to channel "+data.channel)
                 let candidateList: [] = [];
                 channels[data.channelName].users.push(nowUser)
-                let tempList = []
+                let tempList: {[username: string]: User} = {}
                 for(let i=0; i<channels[data.channelName].users.length; i++){
-                    tempList.push(channels[data.channelName].users[i].name)
+                    tempList[channels[data.channelName].users[i].name]= channels[data.channelName].users[i]
                 }
                 socket.join(data.channelName)
                 sendTo(socket, {
@@ -154,6 +158,11 @@ function run(){
                     channelName: data.channelName,
                     candidate: tempList
                 })
+                socket.to(data.channel).emit("message", JSON.stringify({
+                    type: "userJoin",
+                    user: {name: data.name, peerId: data.peerId}
+                }))
+
             }
         })
         socket.on("channelList", ()=>{
@@ -164,7 +173,6 @@ function run(){
                     locked: channel.locked,
                     users: channel.users.length,
                     number: channel.channelNumber
-                    // 필요한 다른 속성들
                 }))
             })
         })
@@ -194,9 +202,15 @@ function run(){
             }
             console.log("start-stream param:", data)
             console.log('Stream started at '+data["channel"]+" from " + data["name"])
+            for(let i=0; i< channels[data.channel].users.length; i++){
+                if(channels[data.channel].users[i].name == data.name){
+                    channels[data.channel].users[i].peerId = data.peerId
+                    channels[data.channel].users[i].isLive = true
+                }
+            }
             socket.to(data.channel).emit('message', JSON.stringify({
                 type: "stream",
-                peerId: data.peerId
+                name: data.name
             }))
         })
         socket.on("disconnecting", (reason) => {
