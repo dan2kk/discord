@@ -6,10 +6,10 @@ class User{
     name: string;
     isLive: boolean;
     peerId: string;
-    constructor(name:string) {
+    constructor(name:string, peerId: string) {
         this.name =name;
         this.isLive = false;
-        this.peerId = ""
+        this.peerId = peerId
     }
 }
 class Channel{
@@ -37,15 +37,12 @@ function run(){
     const io = new Server(httpsServer, {
         cors: {origin:"*"}
     })
-    let p2pServer = require('socket.io-p2p-server').Server
-    io.use(p2pServer)
-    require('socket.io-stream')(io)
     io.on("connect", (socket: Socket)=>{
         socket.on("login", function(msg){
             let data = null;
             try{
                 data = JSON.parse(msg)
-                nowUser = new User(data.name)
+                nowUser = new User(data.name, "")
             }
             catch(e){
                 console.error(e)
@@ -60,7 +57,7 @@ function run(){
                 return
             }
             console.log("login success")
-            users.push(new User(data.name))
+            users.push(new User(data.name, ""))
             allUsers.push(data.name)
 
             sendTo(socket, {
@@ -73,7 +70,7 @@ function run(){
             let data = null;
             try{
                 data = JSON.parse(msg)
-                nowUser = new User(data.name)
+                nowUser = new User(data.name, data.peerId)
             }
             catch(e){
                 console.error(e)
@@ -104,7 +101,7 @@ function run(){
             let data = null;
             try{
                 data = JSON.parse(msg)
-                nowUser = new User(data.name)
+                nowUser = new User(data.name, data.peerId)
             }
             catch(e){
                 console.error(e)
@@ -137,12 +134,11 @@ function run(){
             }
             else{
                 console.log(data.name+ " joining to channel "+data.channelName)
-                let candidateList: [] = [];
                 let tempList: {[username: string]: User} = {}
+                channels[data.channelName].users.push(nowUser)
                 for(let i=0; i<channels[data.channelName].users.length; i++){
                     tempList[channels[data.channelName].users[i].name]= channels[data.channelName].users[i]
                 }
-                channels[data.channelName].users.push(nowUser)
                 socket.join(data.channelName)
                 sendTo(socket, {
                     type: "channelJoin",
@@ -168,7 +164,7 @@ function run(){
             let data = null;
             try{
                 data = JSON.parse(msg)
-                nowUser = new User(data.name)
+                nowUser = new User(data.name, "")
             }
             catch(e){
                 console.error(e)
